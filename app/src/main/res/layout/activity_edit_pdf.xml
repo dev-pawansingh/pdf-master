@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".activities.EditPdfActivity">
+
+    <!-- Top Toolbar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_alignParentTop="true"
+        app:title="PDF Editor"
+        app:navigationIcon="@drawable/ic_back" />
+
+    <!-- Editing Tools Strip -->
+    <HorizontalScrollView
+        android:id="@+id/toolsStrip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/toolbar"
+        android:background="@color/surface_variant"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <ImageButton android:id="@+id/btnText" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_text" app:tint="@color/primary" />
+
+            <ImageButton android:id="@+id/btnHighlight" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_highlight" app:tint="@color/primary" />
+
+            <ImageButton android:id="@+id/btnDraw" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_create" app:tint="@color/primary" />
+
+            <ImageButton android:id="@+id/btnImage" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_image" app:tint="@color/primary" />
+
+            <ImageButton android:id="@+id/btnShape" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_shape" app:tint="@color/primary" />
+
+            <ImageButton android:id="@+id/btnEraser" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_erase" app:tint="@color/primary" />
+
+            <ImageButton android:id="@+id/btnSave" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_save" app:tint="@color/primary" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- PDF Pages RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/pdfRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/toolsStrip"
+        android:layout_above="@id/bottomPanel"
+        android:background="@color/white" />
+
+    <!-- Bottom Panel -->
+    <LinearLayout
+        android:id="@+id/bottomPanel"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:background="@color/surface"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:visibility="gone">
+
+        <Spinner
+            android:id="@+id/colorSpinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <SeekBar
+            android:id="@+id/sizeSeekBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2" />
+
+        <SeekBar
+            android:id="@+id/opacitySeekBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <!-- Text Input Dialog -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/textInputCard"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone"
+        app:cardElevation="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enter Text"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/textInputEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Type your text here" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnCancelText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Cancel" />
+
+                <Button
+                    android:id="@+id/btnConfirmText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="Add Text" />
+
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
+
+</RelativeLayout>
