@@ -1,8 +1,11 @@
 package com.pawansingh.pdfeditor.activities
 
+import android.app.Dialog
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Bundle
@@ -11,8 +14,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.GridLayout
+import android.widget.LinearLayout
+import android.widget.RelativeLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -31,6 +39,14 @@ class EditPdfActivity : AppCompatActivity() {
     private var isBoldActive = false
     private var isItalicActive = false
 
+    private var currentPenColor = Color.RED
+    private var currentPenSize = 5f
+
+    private var currentHighlightColor = Color.YELLOW
+    private var currentHighlightSize = 15f
+
+    private var currentEraserSize = 20f
+
     // Add the missing variables
     private var currentPageIndex = 0
     private var currentTouchX = 0f
@@ -45,6 +61,11 @@ class EditPdfActivity : AppCompatActivity() {
         setupToolButtons()
         setupTextOptions()
         setupTextInputDialog()
+        setupDrawOptions()
+        setupHighlightOptions()
+        updateColorCircle()
+        updateHighlightColorCircle()
+        setupEraserOptions()
 
         val pdfUri = intent.getParcelableExtra<Uri>("pdfUri")
         if (pdfUri != null) {
@@ -54,6 +75,348 @@ class EditPdfActivity : AppCompatActivity() {
             finish()
         }
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+
+    private fun setupEraserOptions() {
+        // Eraser Size SeekBar
+        binding.eraserSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                currentEraserSize = progress.toFloat()
+                updateCurrentEraserSettings()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Eraser Undo/Redo
+        binding.eraserUndoLayout.setOnClickListener { undoLastEraser() }
+        binding.eraserRedoLayout.setOnClickListener { redoLastEraser() }
+    }
+
+    private fun updateCurrentEraserSettings() {
+        adapter.setEraserSettings(currentEraserSize)
+    }
+
+    private fun undoLastEraser() {
+        adapter.undoEraser(currentPageIndex)
+    }
+
+    private fun redoLastEraser() {
+        adapter.redoEraser(currentPageIndex)
+    }
+
+    private fun showEraserOptions() {
+        binding.eraserOptionsPanel.visibility = View.VISIBLE
+        binding.textOptionsPanel.visibility = View.GONE
+        binding.drawOptionsPanel.visibility = View.GONE
+        binding.highlightOptionsPanel.visibility = View.GONE
+    }
+
+    private fun hideEraserOptions() {
+        binding.eraserOptionsPanel.visibility = View.GONE
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////
+
+    // Ye do functions ADD KARO
+
+    private fun updateHighlightColorCircle() {
+        val drawable = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(currentHighlightColor)
+            setStroke(3.dpToPx(), Color.DKGRAY)
+        }
+        binding.highlightColorCircle.background = drawable
+    }
+
+    private fun showHighlightOptions() {
+        binding.highlightOptionsPanel.visibility = View.VISIBLE
+        binding.textOptionsPanel.visibility = View.GONE
+        binding.drawOptionsPanel.visibility = View.GONE
+    }
+
+    private fun hideHighlightOptions() {
+        binding.highlightOptionsPanel.visibility = View.GONE
+    }
+
+    private fun setupHighlightOptions() {
+        // Highlight Color Circle
+        binding.highlightColorCircle.setOnClickListener {
+            showHighlightColorPickerDialog()
+        }
+
+        // Highlight Size SeekBar
+        binding.highlightSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                currentHighlightSize = progress.toFloat()
+                updateCurrentHighlightSettings()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Highlight Undo/Redo
+        binding.highlightUndoLayout.setOnClickListener { undoLastHighlight() }
+        binding.highlightRedoLayout.setOnClickListener { redoLastHighlight() }
+        updateHighlightColorCircle()
+    }
+
+    private fun showHighlightColorPickerDialog() {
+        val colors = listOf(
+            Pair("Yellow", Color.YELLOW),
+            Pair("Pink", Color.MAGENTA),
+            Pair("Cyan", Color.CYAN),
+            Pair("Green", Color.GREEN),
+            Pair("Orange", Color.rgb(255, 165, 0)),
+            Pair("Blue", Color.BLUE),
+            Pair("Red", Color.RED),
+            Pair("Gray", Color.GRAY)
+        )
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Select Highlight Color")
+
+        // Main container with fixed width
+        val mainContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
+        }
+
+        val gridLayout = GridLayout(this).apply {
+            columnCount = 4
+            rowCount = 2
+        }
+
+        var colorDialog: Dialog? = null
+
+        for ((colorName, colorValue) in colors) {
+            val colorContainer = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER
+                layoutParams = GridLayout.LayoutParams().apply {
+                    width = 70.dpToPx()
+                    height = GridLayout.LayoutParams.WRAP_CONTENT
+                    setMargins(2.dpToPx(), 2.dpToPx(), 2.dpToPx(), 2.dpToPx())
+                }
+            }
+
+            val colorView = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(36.dpToPx(), 36.dpToPx())
+
+                // ✅ PROGRAMMATICALLY DRAWABLE BANAO
+                val drawable = GradientDrawable()
+                drawable.shape = GradientDrawable.OVAL
+                drawable.setColor(colorValue)
+                drawable.setStroke(3.dpToPx(), Color.DKGRAY)
+
+                background = drawable
+
+                setOnClickListener {
+                    currentHighlightColor = colorValue
+                    updateHighlightColorCircle()
+                    updateCurrentHighlightSettings()
+                    colorDialog?.dismiss()
+                }
+            }
+
+            val colorNameView = TextView(this).apply {
+                text = colorName
+                textSize = 10f
+                setTextColor(Color.BLACK)
+                gravity = android.view.Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 2.dpToPx()
+                }
+            }
+
+            colorContainer.addView(colorView)
+            colorContainer.addView(colorNameView)
+            gridLayout.addView(colorContainer)
+        }
+
+        mainContainer.addView(gridLayout)
+        builder.setView(mainContainer)
+        builder.setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
+
+        colorDialog = builder.create()
+        colorDialog.window?.setLayout(280.dpToPx(), ViewGroup.LayoutParams.WRAP_CONTENT)
+        colorDialog.show()
+    }
+
+    private fun updateCurrentHighlightSettings() {
+        adapter.setHighlightSettings(currentHighlightColor, currentHighlightSize)
+    }
+
+    private fun undoLastHighlight() {
+        adapter.undoHighlight(currentPageIndex)
+    }
+
+    private fun redoLastHighlight() {
+        adapter.redoHighlight(currentPageIndex)
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+
+    private fun setupDrawOptions() {
+        // YEH POORA FUNCTION ADD KARO
+        // Color Circle Click Listener
+        binding.colorCircle.setOnClickListener {
+            showColorPickerDialog()
+        }
+
+        // Pen Size SeekBar
+        binding.penSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                currentPenSize = progress.toFloat()
+                updateCurrentPenSettings()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Undo Button with Text
+        binding.undoLayout.setOnClickListener {
+            undoLastDrawing()
+        }
+
+        // Redo Button with Text
+        binding.redoLayout.setOnClickListener {
+            redoLastDrawing()
+        }
+    }
+
+    // YEH SAB FUNCTIONS ADD KARO
+    private fun showColorPickerDialog() {
+        val colors = listOf(
+            Pair("Black", Color.BLACK),
+            Pair("Red", Color.RED),
+            Pair("White", Color.WHITE),
+            Pair("Green", Color.GREEN),
+            Pair("Blue", Color.BLUE),
+            Pair("Yellow", Color.YELLOW),
+            Pair("Pink", Color.MAGENTA),
+            Pair("Gray", Color.GRAY)
+        )
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Select Pen Color")
+
+        // Main container with fixed width
+        val mainContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
+        }
+
+        val gridLayout = GridLayout(this).apply {
+            columnCount = 4
+            rowCount = 2
+        }
+
+        // ✅ VARIABLE BANAO DIALOG KE LIYE
+        var colorDialog: Dialog? = null
+
+        for ((colorName, colorValue) in colors) {
+            val colorContainer = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER
+                layoutParams = GridLayout.LayoutParams().apply {
+                    width = 70.dpToPx()  // ✅ WIDTH THODI KAM KARO
+                    height = GridLayout.LayoutParams.WRAP_CONTENT
+                    setMargins(2.dpToPx(), 2.dpToPx(), 2.dpToPx(), 2.dpToPx()) // ✅ MARGIN BAHUT KAM KARO
+                }
+            }
+
+            val colorView = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(36.dpToPx(), 36.dpToPx())
+
+                // ✅ PROGRAMMATICALLY DRAWABLE BANAO
+                val drawable = GradientDrawable()
+                drawable.shape = GradientDrawable.OVAL
+                drawable.setColor(colorValue) // ✅ ACTUAL COLOR SET KARO
+                drawable.setStroke(3.dpToPx(), Color.DKGRAY) // ✅ BORDER ADD KARO
+
+                background = drawable
+
+                setOnClickListener {
+                    currentPenColor = colorValue
+                    updateColorCircle()
+                    updateCurrentPenSettings()
+                    colorDialog?.dismiss()
+                }
+            }
+
+            val colorNameView = TextView(this).apply {
+                text = colorName
+                textSize = 10f
+                setTextColor(Color.BLACK)
+                gravity = android.view.Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 2.dpToPx() // ✅ MARGIN KAM KARO
+                }
+            }
+
+            colorContainer.addView(colorView)
+            colorContainer.addView(colorNameView)
+            gridLayout.addView(colorContainer)
+        }
+
+        mainContainer.addView(gridLayout)
+        builder.setView(mainContainer)
+        builder.setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
+
+        colorDialog = builder.create() // ✅ DIALOG KO VARIABLE MEIN STORE KARO
+
+        // Dialog ki width set karo (thodi kam karo)
+        colorDialog.window?.setLayout(280.dpToPx(), ViewGroup.LayoutParams.WRAP_CONTENT) // ✅ 320 se 280 KARO
+
+        colorDialog.show()
+    }
+
+    private fun updateColorCircle() {
+        val drawable = GradientDrawable()
+        drawable.shape = GradientDrawable.OVAL
+        drawable.setColor(currentPenColor) // Selected color
+        drawable.setStroke(2.dpToPx(), Color.DKGRAY) // Border
+
+        binding.colorCircle.background = drawable
+    }
+
+    private fun updateCurrentPenSettings() {
+        adapter.setPenSettings(currentPenColor, currentPenSize)
+    }
+
+    private fun undoLastDrawing() {
+        adapter.undoDrawing(currentPageIndex)
+    }
+
+    private fun redoLastDrawing() {
+        adapter.redoDrawing(currentPageIndex)
+    }
+
+    // Extension function
+    private fun Int.dpToPx(): Int {
+        return (this * resources.displayMetrics.density).toInt()
+    }
+
+    private fun showDrawOptions() {
+        binding.drawOptionsPanel.visibility = View.VISIBLE
+    }
+
+    private fun hideDrawOptions() {
+        binding.drawOptionsPanel.visibility = View.GONE
+    }
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun initializeViews() {
         binding.pdfRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -90,6 +453,8 @@ class EditPdfActivity : AppCompatActivity() {
             setMode(PdfPageWithOverlayView.Mode.HAND)
             updateToolSelection(binding.btnHand)
             hideTextOptions()
+            hideDrawOptions()
+            hideHighlightOptions()
             clearTextSelection()
         }
 
@@ -97,12 +462,16 @@ class EditPdfActivity : AppCompatActivity() {
             setMode(PdfPageWithOverlayView.Mode.TEXT)
             updateToolSelection(binding.btnText)
             showTextOptions()
+            hideHighlightOptions()
+            hideDrawOptions()
         }
 
         binding.btnDraw.setOnClickListener {
             setMode(PdfPageWithOverlayView.Mode.DRAW)
             updateToolSelection(binding.btnDraw)
+            showDrawOptions()
             hideTextOptions()
+            hideHighlightOptions()
             clearTextSelection()
         }
 
@@ -110,6 +479,8 @@ class EditPdfActivity : AppCompatActivity() {
             setMode(PdfPageWithOverlayView.Mode.HIGHLIGHT)
             updateToolSelection(binding.btnHighlight)
             hideTextOptions()
+            hideDrawOptions()
+            showHighlightOptions()
             clearTextSelection()
         }
 
@@ -117,6 +488,9 @@ class EditPdfActivity : AppCompatActivity() {
             setMode(PdfPageWithOverlayView.Mode.ERASER)
             updateToolSelection(binding.btnEraser)
             hideTextOptions()
+            showEraserOptions()
+            hideDrawOptions()
+            hideHighlightOptions()
             clearTextSelection()
         }
 
@@ -279,15 +653,58 @@ class EditPdfActivity : AppCompatActivity() {
     private fun setMode(mode: PdfPageWithOverlayView.Mode) {
         currentMode = mode
         adapter.setModeForAllPages(mode)
-        updateTextOptionsVisibility()
+        updateToolOptionsVisibility()
     }
 
-    private fun updateTextOptionsVisibility() {
-        if (currentMode == PdfPageWithOverlayView.Mode.TEXT) {
-            showTextOptions()
-        } else {
-            hideTextOptions()
+    private fun updateToolOptionsVisibility() {
+        when (currentMode) {
+            PdfPageWithOverlayView.Mode.TEXT -> {
+                showTextOptions()
+                hideDrawOptions()
+                hideHighlightOptions()
+                hideEraserOptions()
+                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
+                    addRule(RelativeLayout.BELOW, R.id.textOptionsPanel)
+                }
+            }
+            PdfPageWithOverlayView.Mode.DRAW -> {
+                showDrawOptions()
+                hideTextOptions()
+                hideHighlightOptions()
+                hideEraserOptions()
+                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
+                    addRule(RelativeLayout.BELOW, R.id.drawOptionsPanel)
+                }
+            }
+            PdfPageWithOverlayView.Mode.HIGHLIGHT -> {
+                showHighlightOptions()
+                hideTextOptions()
+                hideDrawOptions()
+                hideEraserOptions()
+                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
+                    addRule(RelativeLayout.BELOW, R.id.highlightOptionsPanel)
+                }
+            }
+            PdfPageWithOverlayView.Mode.ERASER -> { // ✅ YEH NAYA CASE ADD KARO
+                showEraserOptions()
+                hideTextOptions()
+                hideDrawOptions()
+                hideHighlightOptions()
+                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
+                    addRule(RelativeLayout.BELOW, R.id.eraserOptionsPanel)
+                }
+            }
+            else -> {
+                hideTextOptions()
+                hideDrawOptions()
+                hideHighlightOptions()
+                hideEraserOptions()
+                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
+                    addRule(RelativeLayout.BELOW, R.id.toolsStrip)
+                }
+            }
         }
+        binding.pdfRecyclerView.requestLayout()
     }
 
     private fun setupTextInputDialog() {
@@ -359,6 +776,12 @@ class EditPdfActivity : AppCompatActivity() {
                     onTextSelected = { textAnnotation -> onTextSelected(textAnnotation) }
                 )
                 binding.pdfRecyclerView.adapter = adapter
+
+                //////
+                updateCurrentPenSettings()
+                updateCurrentHighlightSettings()
+                updateCurrentEraserSettings()
+                //////
 
                 Toast.makeText(this, "PDF loaded: ${pdfBitmaps.size} pages", Toast.LENGTH_SHORT).show()
             }

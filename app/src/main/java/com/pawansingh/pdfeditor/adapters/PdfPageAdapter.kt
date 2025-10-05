@@ -67,4 +67,50 @@ class PdfPageAdapter(
     fun getOverlayView(pageIndex: Int): PdfPageWithOverlayView? {
         return overlayViews[pageIndex]
     }
+    // PdfPageAdapter.kt mein ye functions ADD KARO
+    fun setPenSettings(color: Int, size: Float) {
+        overlayViews.values.forEach { overlayView ->
+            overlayView.setPenSettings(color, size)
+        }
+    }
+
+    fun undoDrawing(pageIndex: Int) {
+        overlayViews[pageIndex]?.undo()
+    }
+
+    fun redoDrawing(pageIndex: Int) {
+        overlayViews[pageIndex]?.redo()
+    }
+
+    // PdfPageAdapter.kt mein ye methods ADD KARO
+
+    // Highlight settings
+    fun setHighlightSettings(color: Int, size: Float) {
+        overlayViews.values.forEach { overlayView ->
+            overlayView.setHighlightSettings(color, size)
+        }
+    }
+
+    fun undoHighlight(pageIndex: Int) {
+        overlayViews[pageIndex]?.undoHighlight()
+    }
+
+    fun redoHighlight(pageIndex: Int) {
+        overlayViews[pageIndex]?.redoHighlight()
+    }
+
+    // Eraser settings
+    fun setEraserSettings(size: Float) {
+        overlayViews.values.forEach { overlayView ->
+            overlayView.setEraserSettings(size)
+        }
+    }
+
+    fun undoEraser(pageIndex: Int) {
+        overlayViews[pageIndex]?.undoEraser()
+    }
+
+    fun redoEraser(pageIndex: Int) {
+        overlayViews[pageIndex]?.redoEraser()
+    }
 }

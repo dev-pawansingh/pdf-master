@@ -1,6 +1,7 @@
 package com.pawansingh.pdfeditor.views
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
@@ -54,9 +55,126 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
     var onTextSelected: ((TextAnnotation?) -> Unit)? = null
     var onTouchHandled: ((Boolean) -> Unit)? = null
 
+    // Highlight ke liye variables
+    private var currentHighlightColor = Color.YELLOW
+    private var currentHighlightSize = 15f
+    private val highlightPaths = mutableListOf<DrawingPath>()
+    private var currentHighlightPath = Path()
+    private var currentHighlightPaint = Paint()
+
+    // Highlight history
+    private val highlightHistory = mutableListOf<List<DrawingPath>>()
+    private val highlightRedoHistory = mutableListOf<List<DrawingPath>>()
+
+    // Eraser ke liye variables
+    private var currentEraserSize = 20f
+    private val eraserPaths = mutableListOf<DrawingPath>()
+    private var currentEraserPath = Path()
+    private var currentEraserPaint = Paint()
+
+    // Eraser history
+    private val eraserHistory = mutableListOf<List<DrawingPath>>()
+    private val eraserRedoHistory = mutableListOf<List<DrawingPath>>()
+
+    // Eraser preview (translucent circle)
+    private var eraserPreviewX = -1f
+    private var eraserPreviewY = -1f
+    private var showEraserPreview = false
+
+
     init {
+        setLayerType(LAYER_TYPE_SOFTWARE,null)
         setupPaint()
+        setupHighlightPaint()
+        setupEraserPaint()
     }
+
+    private fun setupEraserPaint() {
+        currentEraserPaint = Paint().apply {
+            color = Color.TRANSPARENT
+            style = Paint.Style.STROKE
+            strokeWidth = 20f
+            isAntiAlias = true
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+        }
+    }
+
+    // Eraser settings update karne ke liye
+    fun setEraserSettings(size: Float) {
+        currentEraserSize = size
+        currentEraserPaint.strokeWidth = currentEraserSize
+        if(currentMode == Mode.ERASER){
+            invalidate()
+        }
+    }
+
+    // Eraser undo/redo functions
+    fun undoEraser() {
+        if (eraserPaths.isNotEmpty()) {
+            eraserRedoHistory.add(ArrayList(eraserPaths))
+            eraserPaths.clear()
+            if (eraserHistory.isNotEmpty()) {
+                val lastState = eraserHistory.removeAt(eraserHistory.size - 1)
+                eraserPaths.addAll(lastState)
+            }
+            invalidate()
+        }
+    }
+
+    fun redoEraser() {
+        if (eraserRedoHistory.isNotEmpty()) {
+            eraserHistory.add(ArrayList(eraserPaths))
+            eraserPaths.clear()
+            val redoState = eraserRedoHistory.removeAt(eraserRedoHistory.size - 1)
+            eraserPaths.addAll(redoState)
+            invalidate()
+        }
+    }
+
+    private fun setupHighlightPaint() {
+        currentHighlightPaint = Paint().apply {
+            color = Color.YELLOW and 0x80FFFFFF.toInt() // Semi-transparent yellow
+            style = Paint.Style.FILL_AND_STROKE
+            strokeWidth = 15f
+            isAntiAlias = true
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+            alpha = 128 // 50% transparency
+        }
+    }
+    // Highlight settings update karne ke liye
+    fun setHighlightSettings(color: Int, size: Float) {
+        currentHighlightColor = color and 0x80FFFFFF.toInt() // Semi-transparent
+        currentHighlightSize = size
+        currentHighlightPaint.color = currentHighlightColor
+        currentHighlightPaint.strokeWidth = currentHighlightSize
+    }
+
+    // Highlight undo/redo functions
+    fun undoHighlight() {
+        if (highlightPaths.isNotEmpty()) {
+            highlightRedoHistory.add(ArrayList(highlightPaths))
+            highlightPaths.clear()
+            if (highlightHistory.isNotEmpty()) {
+                val lastState = highlightHistory.removeAt(highlightHistory.size - 1)
+                highlightPaths.addAll(lastState)
+            }
+            invalidate()
+        }
+    }
+
+    fun redoHighlight() {
+        if (highlightRedoHistory.isNotEmpty()) {
+            highlightHistory.add(ArrayList(highlightPaths))
+            highlightPaths.clear()
+            val redoState = highlightRedoHistory.removeAt(highlightRedoHistory.size - 1)
+            highlightPaths.addAll(redoState)
+            invalidate()
+        }
+    }
+
 
     private fun setupPaint() {
         currentPaint = Paint().apply {
@@ -82,17 +200,19 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
                 currentPaint.style = Paint.Style.STROKE
                 currentPaint.color = Color.RED
                 currentPaint.strokeWidth = 5f
+                currentPaint.xfermode = null
             }
-            Mode.HIGHLIGHT -> {
-                currentPaint.style = Paint.Style.FILL_AND_STROKE
-                currentPaint.color = Color.YELLOW and 0x80FFFFFF.toInt()
-                currentPaint.strokeWidth = 20f
+            Mode.HIGHLIGHT -> { // ✅ HIGHLIGHT MODE ADD KARO
+                currentHighlightPaint.style = Paint.Style.FILL_AND_STROKE
+                currentHighlightPaint.color = currentHighlightColor
+                currentHighlightPaint.strokeWidth = currentHighlightSize
+                currentHighlightPaint.alpha = 128 // Semi-transparent
+                currentHighlightPaint.xfermode = null
             }
-            Mode.ERASER -> {
-                currentPaint.style = Paint.Style.STROKE
-                currentPaint.color = Color.TRANSPARENT
-                currentPaint.strokeWidth = 20f
-                currentPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+            Mode.ERASER -> { // ✅ ERASER MODE ADD KARO
+                currentEraserPaint.style = Paint.Style.STROKE
+                currentEraserPaint.strokeWidth = currentEraserSize
+                currentEraserPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
             }
             else -> {}
         }
@@ -182,8 +302,34 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        val saveCount = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
+
         paths.forEach { canvas.drawPath(it.path, it.paint) }
+        highlightPaths.forEach { canvas.drawPath(it.path, it.paint) }
+
         if (!currentPath.isEmpty) canvas.drawPath(currentPath, currentPaint)
+        if (!currentHighlightPath.isEmpty) canvas.drawPath(currentHighlightPath, currentHighlightPaint)
+
+        // ✅ ERASER PATHS BHI DRAW KARO
+        eraserPaths.forEach { canvas.drawPath(it.path, it.paint) }
+        if (!currentEraserPath.isEmpty) canvas.drawPath(currentEraserPath, currentEraserPaint)
+
+        // ✅ ERASER PREVIEW DRAW KARO
+        if (showEraserPreview && eraserPreviewX != -1f && eraserPreviewY != -1f) {
+            val previewPaint = Paint().apply {
+                color = Color.argb(128, 255, 0, 0) // Semi-transparent red
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+                isAntiAlias = true
+            }
+            val fillPaint = Paint().apply {
+                color = Color.argb(64, 255, 0, 0) // More transparent red fill
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            }
+            canvas.drawCircle(eraserPreviewX, eraserPreviewY, currentEraserSize / 2, fillPaint)
+            canvas.drawCircle(eraserPreviewX, eraserPreviewY, currentEraserSize / 2, previewPaint)
+        }
 
         textAnnotations.forEach { textAnn ->
             canvas.drawText(textAnn.text, textAnn.x, textAnn.y, textAnn.paint)
@@ -193,6 +339,7 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
                 drawResizeButton(canvas, textAnn)
             }
         }
+        canvas.restoreToCount(saveCount)
     }
 
     private fun drawSelectionBorder(canvas: Canvas, textAnn: TextAnnotation) {
@@ -287,7 +434,7 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
 
         val deleteButtonX = textAnn.x + textWidth + 25f
         val deleteButtonY = textAnn.y + metrics.top - 20f
-        val buttonRadius = 15f
+        val buttonRadius = 25f
 
         val distance = sqrt(
             (x - deleteButtonX) * (x - deleteButtonX) +
@@ -302,7 +449,7 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
 
         val resizeButtonX = textAnn.x + textWidth + 25f
         val resizeButtonY = textAnn.y + 25f
-        val buttonRadius = 15f
+        val buttonRadius = 25f
 
         val distance = sqrt(
             (x - resizeButtonX) * (x - resizeButtonX) +
@@ -388,8 +535,23 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
 
                 // Current mode behavior
                 when (currentMode) {
-                    Mode.DRAW, Mode.HIGHLIGHT, Mode.ERASER -> {
+                    Mode.DRAW -> {
                         currentPath.moveTo(x, y)
+                        onTouchHandled?.invoke(true)
+                        parent.requestDisallowInterceptTouchEvent(true)
+                        return true
+                    }
+                    Mode.HIGHLIGHT -> {
+                        currentHighlightPath.moveTo(x, y) // ✅ HIGHLIGHT KE LIYE ALAG PATH
+                        onTouchHandled?.invoke(true)
+                        parent.requestDisallowInterceptTouchEvent(true)
+                        return true
+                    }
+                    Mode.ERASER -> { // ✅ ERASER MODE ADD KARO
+                        currentEraserPath.moveTo(x, y)
+                        showEraserPreview = true
+                        eraserPreviewX = x
+                        eraserPreviewY = y
                         onTouchHandled?.invoke(true)
                         parent.requestDisallowInterceptTouchEvent(true)
                         return true
@@ -423,8 +585,25 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
                         return true
                     }
 
-                    currentMode == Mode.DRAW || currentMode == Mode.HIGHLIGHT || currentMode == Mode.ERASER -> {
+                    currentMode == Mode.DRAW -> {
                         currentPath.lineTo(x, y)
+                        invalidate()
+                        onTouchHandled?.invoke(true)
+                        parent.requestDisallowInterceptTouchEvent(true)
+                        return true
+                    }
+
+                    currentMode == Mode.HIGHLIGHT -> { // ✅ HIGHLIGHT MODE ADD KARO
+                        currentHighlightPath.lineTo(x, y)
+                        invalidate()
+                        onTouchHandled?.invoke(true)
+                        parent.requestDisallowInterceptTouchEvent(true)
+                        return true
+                    }
+                    currentMode == Mode.ERASER -> { // ✅ ERASER MODE ADD KARO
+                        currentEraserPath.lineTo(x, y)
+                        eraserPreviewX = x
+                        eraserPreviewY = y
                         invalidate()
                         onTouchHandled?.invoke(true)
                         parent.requestDisallowInterceptTouchEvent(true)
@@ -436,13 +615,38 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 isMovingText = false
                 isResizingText = false
+                showEraserPreview = false
                 onTouchHandled?.invoke(false)
                 parent.requestDisallowInterceptTouchEvent(false)
 
-                if (currentMode == Mode.DRAW || currentMode == Mode.HIGHLIGHT || currentMode == Mode.ERASER) {
-                    paths.add(DrawingPath(Path(currentPath), Paint(currentPaint)))
-                    currentPath.reset()
-                    invalidate()
+                when (currentMode) {
+                    Mode.DRAW -> {
+                        // DRAWING HISTORY SAVE KARO
+                        drawingHistory.add(ArrayList(paths))
+                        redoHistory.clear()
+
+                        paths.add(DrawingPath(Path(currentPath), Paint(currentPaint)))
+                        currentPath.reset()
+                        invalidate()
+                    }
+                    Mode.HIGHLIGHT -> { // ✅ HIGHLIGHT HISTORY SAVE KARO
+                        highlightHistory.add(ArrayList(highlightPaths))
+                        highlightRedoHistory.clear()
+
+                        highlightPaths.add(DrawingPath(Path(currentHighlightPath), Paint(currentHighlightPaint)))
+                        currentHighlightPath.reset()
+                        invalidate()
+                    }
+                    Mode.ERASER -> { // ✅ ERASER HISTORY SAVE KARO
+                        eraserHistory.add(ArrayList(eraserPaths))
+                        eraserRedoHistory.clear()
+                        eraserPaths.add(DrawingPath(Path(currentEraserPath), Paint(currentEraserPaint)))
+                        currentEraserPath.reset()
+                        invalidate()
+                    }
+                    else -> {
+                        // Do nothing
+                    }
                 }
             }
         }
@@ -484,4 +688,45 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
     // Data classes
     data class DrawingPath(val path: Path, val paint: Paint)
     data class TextAnnotation(val text: String, val x: Float, val y: Float, val paint: Paint)
+
+    // Pen settings update karne ke liye
+    fun setPenSettings(color: Int, size: Float) {
+        currentPaint.color = color
+        currentPaint.strokeWidth = size
+    }
+
+    // Drawing history ke liye variables add karo
+    private val drawingHistory = mutableListOf<List<DrawingPath>>()
+    private val redoHistory = mutableListOf<List<DrawingPath>>()
+
+    // Undo function
+    fun undo() {
+        if (paths.isNotEmpty()) {
+            // Current paths ko redo history mein save karo
+            redoHistory.add(ArrayList(paths))
+
+            // Last state restore karo
+            paths.clear()
+            if (drawingHistory.isNotEmpty()) {
+                val lastState = drawingHistory.removeAt(drawingHistory.size - 1)
+                paths.addAll(lastState)
+            }
+            invalidate()
+        }
+    }
+
+    // Redo function
+    fun redo() {
+        if (redoHistory.isNotEmpty()) {
+            // Current paths ko history mein save karo
+            drawingHistory.add(ArrayList(paths))
+
+            // Redo state restore karo
+            paths.clear()
+            val redoState = redoHistory.removeAt(redoHistory.size - 1)
+            paths.addAll(redoState)
+            invalidate()
+        }
+    }
+
 }
