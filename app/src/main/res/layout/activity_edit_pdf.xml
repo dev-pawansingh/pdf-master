@@ -26,30 +26,193 @@
         android:padding="8dp">
 
         <LinearLayout
+            android:id="@+id/toolsContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <ImageButton android:id="@+id/btnText" android:layout_width="48dp" android:layout_height="48dp"
-                android:src="@drawable/ic_text" app:tint="@color/primary" />
+            <ImageButton
+                android:id="@+id/btnHand"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_hand"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/primary" />
 
-            <ImageButton android:id="@+id/btnHighlight" android:layout_width="48dp" android:layout_height="48dp"
-                android:src="@drawable/ic_highlight" app:tint="@color/primary" />
+            <ImageButton
+                android:id="@+id/btnText"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_text"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/primary" />
 
-            <ImageButton android:id="@+id/btnDraw" android:layout_width="48dp" android:layout_height="48dp"
-                android:src="@drawable/ic_create" app:tint="@color/primary" />
+            <ImageButton
+                android:id="@+id/btnDraw"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_create"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/primary" />
 
-            <ImageButton android:id="@+id/btnImage" android:layout_width="48dp" android:layout_height="48dp"
-                android:src="@drawable/ic_image" app:tint="@color/primary" />
+            <ImageButton
+                android:id="@+id/btnHighlight"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_highlight"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/primary" />
 
-            <ImageButton android:id="@+id/btnShape" android:layout_width="48dp" android:layout_height="48dp"
-                android:src="@drawable/ic_shape" app:tint="@color/primary" />
+            <ImageButton
+                android:id="@+id/btnEraser"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_erase"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/primary" />
 
-            <ImageButton android:id="@+id/btnEraser" android:layout_width="48dp" android:layout_height="48dp"
-                android:src="@drawable/ic_erase" app:tint="@color/primary" />
+            <ImageButton
+                android:id="@+id/btnSave"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_save"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/primary" />
 
-            <ImageButton android:id="@+id/btnSave" android:layout_width="48dp" android:layout_height="48dp"
-                android:src="@drawable/ic_save" app:tint="@color/primary" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Text Options Panel - Single Line -->
+    <HorizontalScrollView
+        android:id="@+id/textOptionsPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/toolsStrip"
+        android:background="@color/surface"
+        android:padding="5dp"
+        android:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Font Family -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginEnd="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Font"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary" />
+
+                <Spinner
+                    android:id="@+id/fontSpinner"
+                    android:layout_width="100dp"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <!-- Text Size -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginEnd="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Size"
+                    android:textSize="10sp"
+                    android:textColor="@color/primary"/>
+
+                <Spinner
+                    android:id="@+id/textSizeSpinner"
+                    android:layout_width="80dp"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <!-- Color Picker -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginEnd="12px">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Color"
+                    android:textSize="10sp"
+                    android:textColor="@color/primary" />
+
+                <Spinner
+                    android:id="@+id/colorSpinner"
+                    android:layout_width="70dp"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <!-- Text Style -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Style"
+                    android:textSize="10sp"
+                    android:textColor="@color/primary" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="2dp">
+
+                    <!-- Bold Toggle -->
+                    <TextView
+                        android:id="@+id/btnBold"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:gravity="center"
+                        android:text="B"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:layout_marginEnd="2dp" />
+
+                    <!-- Italic Toggle -->
+                    <TextView
+                        android:id="@+id/btnItalic"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:gravity="center"
+                        android:text="I"
+                        android:textSize="14sp"
+                        android:textStyle="italic"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:layout_marginStart="2dp" />
+
+                </LinearLayout>
+            </LinearLayout>
+
         </LinearLayout>
     </HorizontalScrollView>
 
@@ -58,39 +221,8 @@
         android:id="@+id/pdfRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/toolsStrip"
-        android:layout_above="@id/bottomPanel"
+        android:layout_below="@id/textOptionsPanel"
         android:background="@color/white" />
-
-    <!-- Bottom Panel -->
-    <LinearLayout
-        android:id="@+id/bottomPanel"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:layout_alignParentBottom="true"
-        android:background="@color/surface"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:visibility="gone">
-
-        <Spinner
-            android:id="@+id/colorSpinner"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <SeekBar
-            android:id="@+id/sizeSeekBar"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="2" />
-
-        <SeekBar
-            android:id="@+id/opacitySeekBar"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-    </LinearLayout>
 
     <!-- Text Input Dialog -->
     <com.google.android.material.card.MaterialCardView

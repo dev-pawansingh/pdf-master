@@ -1,62 +1,53 @@
 package com.pawansingh.pdfeditor.activities
 
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.ProgressBar
+import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.appbar.MaterialToolbar
 import com.pawansingh.pdfeditor.R
 import com.pawansingh.pdfeditor.adapters.PdfPageAdapter
+import com.pawansingh.pdfeditor.databinding.ActivityEditPdfBinding
 import com.pawansingh.pdfeditor.views.PdfPageWithOverlayView
 
 class EditPdfActivity : AppCompatActivity() {
 
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var textInputCard: com.google.android.material.card.MaterialCardView
-    private lateinit var textInputEditText: EditText
-
-    private var currentPdfUri: Uri? = null
+    private lateinit var binding: ActivityEditPdfBinding
     private val pdfBitmaps = mutableListOf<Bitmap>()
-    private var pdfLoaded = false
+    private lateinit var adapter: PdfPageAdapter
     private var currentMode = PdfPageWithOverlayView.Mode.HAND
+    private var selectedTextAnnotation: PdfPageWithOverlayView.TextAnnotation? = null
+    private var isBoldActive = false
+    private var isItalicActive = false
+
+    // Add the missing variables
     private var currentPageIndex = 0
     private var currentTouchX = 0f
     private var currentTouchY = 0f
-    private lateinit var adapter: PdfPageAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_edit_pdf)
+        binding = ActivityEditPdfBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val toolbar: MaterialToolbar = findViewById(R.id.toolbar)
-        recyclerView = findViewById(R.id.pdfRecyclerView)
-        progressBar = findViewById(R.id.progressBar)
-        textInputCard = findViewById(R.id.textInputCard)
-        textInputEditText = findViewById(R.id.textInputEditText)
-
-        // Setup RecyclerView
-        recyclerView.layoutManager = LinearLayoutManager(this)
-
-        toolbar.setNavigationOnClickListener { finish() }
-
-        // Setup tool buttons
+        initializeViews()
         setupToolButtons()
+        setupTextOptions()
         setupTextInputDialog()
 
-        // Load PDF from intent
         val pdfUri = intent.getParcelableExtra<Uri>("pdfUri")
         if (pdfUri != null) {
-            currentPdfUri = pdfUri
             loadPdfPages(pdfUri)
         } else {
             Toast.makeText(this, "No PDF selected", Toast.LENGTH_SHORT).show()
@@ -64,57 +55,257 @@ class EditPdfActivity : AppCompatActivity() {
         }
     }
 
+    private fun initializeViews() {
+        binding.pdfRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding.toolbar.setNavigationOnClickListener { finish() }
+
+        binding.pdfRecyclerView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                selectedTextAnnotation?.let { textAnn ->
+                    val overlay = adapter.getOverlayView(currentPageIndex)
+                    overlay?.let { ov ->
+                        // Convert RecyclerView touch to overlay coordinates
+                        val rvLocation = IntArray(2)
+                        overlay.getLocationOnScreen(rvLocation)
+
+                        val touchXOnOverlay = event.rawX - rvLocation[0]
+                        val touchYOnOverlay = event.rawY - rvLocation[1]
+
+                        val textRect = ov.getTextRect(textAnn)
+                        if (!textRect.contains(touchXOnOverlay, touchYOnOverlay)) {
+                            clearTextSelection()
+                        }
+                    }
+                }
+            }
+            false
+        }
+
+    }
+
     private fun setupToolButtons() {
-        // Hand mode for scrolling/selection
-        findViewById<ImageButton>(R.id.btnHighlight).setOnClickListener {
+        updateToolSelection(binding.btnHand)
+
+        binding.btnHand.setOnClickListener {
             setMode(PdfPageWithOverlayView.Mode.HAND)
-            Toast.makeText(this, "Hand mode - Scroll and select", Toast.LENGTH_SHORT).show()
+            updateToolSelection(binding.btnHand)
+            hideTextOptions()
+            clearTextSelection()
         }
 
-        // Text mode
-        findViewById<ImageButton>(R.id.btnText).setOnClickListener {
+        binding.btnText.setOnClickListener {
             setMode(PdfPageWithOverlayView.Mode.TEXT)
-            Toast.makeText(this, "Text mode - Tap to add text", Toast.LENGTH_SHORT).show()
+            updateToolSelection(binding.btnText)
+            showTextOptions()
         }
 
-        // Draw mode
-        findViewById<ImageButton>(R.id.btnDraw).setOnClickListener {
+        binding.btnDraw.setOnClickListener {
             setMode(PdfPageWithOverlayView.Mode.DRAW)
-            Toast.makeText(this, "Draw mode", Toast.LENGTH_SHORT).show()
+            updateToolSelection(binding.btnDraw)
+            hideTextOptions()
+            clearTextSelection()
         }
 
-        // Eraser mode
-        findViewById<ImageButton>(R.id.btnEraser).setOnClickListener {
+        binding.btnHighlight.setOnClickListener {
+            setMode(PdfPageWithOverlayView.Mode.HIGHLIGHT)
+            updateToolSelection(binding.btnHighlight)
+            hideTextOptions()
+            clearTextSelection()
+        }
+
+        binding.btnEraser.setOnClickListener {
             setMode(PdfPageWithOverlayView.Mode.ERASER)
-            Toast.makeText(this, "Eraser mode", Toast.LENGTH_SHORT).show()
+            updateToolSelection(binding.btnEraser)
+            hideTextOptions()
+            clearTextSelection()
         }
 
-        // Move text mode
-        findViewById<ImageButton>(R.id.btnSave).setOnClickListener {
-            setMode(PdfPageWithOverlayView.Mode.MOVE_TEXT)
-            Toast.makeText(this, "Move text mode - Drag text to reposition", Toast.LENGTH_SHORT).show()
+        binding.btnSave.setOnClickListener {
+            Toast.makeText(this, "Save functionality coming soon", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun updateToolSelection(selectedButton: android.widget.ImageButton) {
+        val buttons = listOf(
+            binding.btnHand, binding.btnText, binding.btnDraw,
+            binding.btnHighlight, binding.btnEraser
+        )
+
+        buttons.forEach { button ->
+            if (button == selectedButton) {
+                button.setBackgroundColor(ContextCompat.getColor(this, R.color.primary))
+                button.setColorFilter(ContextCompat.getColor(this, R.color.pdf_red))
+            } else {
+                button.setBackgroundColor(Color.TRANSPARENT)
+                button.setColorFilter(ContextCompat.getColor(this, R.color.primary))
+            }
+        }
+    }
+
+    private fun setupTextOptions() {
+        // Font Spinner with default value display
+        val fonts = arrayOf("Default", "Serif", "Sans Serif", "Monospace")
+        val fontAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, fonts) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                val textView = view.findViewById<TextView>(android.R.id.text1)
+                textView.text = "Font: ${fonts[position]}"
+                return view
+            }
+        }
+        fontAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.fontSpinner.adapter = fontAdapter
+        binding.fontSpinner.setSelection(0)
+
+        binding.fontSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val fontFamily = when (position) {
+                    1 -> Typeface.SERIF
+                    2 -> Typeface.SANS_SERIF
+                    3 -> Typeface.MONOSPACE
+                    else -> Typeface.DEFAULT
+                }
+                selectedTextAnnotation?.let {
+                    adapter.getOverlayView(currentPageIndex)?.setFontFamily(fontFamily)
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // Text Size Spinner with default value display
+        val textSizes = arrayOf("12", "14", "16", "18", "20", "24", "28", "32", "36", "40")
+        val sizeAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, textSizes) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                val textView = view.findViewById<TextView>(android.R.id.text1)
+                textView.text = "Size: ${textSizes[position]}"
+                return view
+            }
+        }
+        sizeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.textSizeSpinner.adapter = sizeAdapter
+        binding.textSizeSpinner.setSelection(4) // Default to 20
+
+        binding.textSizeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val size = textSizes[position].toFloat()
+                selectedTextAnnotation?.let {
+                    adapter.getOverlayView(currentPageIndex)?.setTextSize(size)
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // Color Spinner with default value display
+        val colors = arrayOf("Black", "Red", "Blue", "Green")
+        val colorAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, colors) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                val textView = view.findViewById<TextView>(android.R.id.text1)
+                textView.text = "Color: ${colors[position]}"
+                textView.setTextColor(getColorForPosition(position))
+                return view
+            }
+
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getDropDownView(position, convertView, parent)
+                val textView = view.findViewById<TextView>(android.R.id.text1)
+                textView.text = colors[position]
+                textView.setTextColor(getColorForPosition(position))
+                return view
+            }
+
+            private fun getColorForPosition(position: Int): Int {
+                return when (position) {
+                    0 -> Color.BLACK
+                    1 -> Color.RED
+                    2 -> Color.BLUE
+                    3 -> Color.GREEN
+                    else -> Color.BLACK
+                }
+            }
+        }
+        colorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.colorSpinner.adapter = colorAdapter
+        binding.colorSpinner.setSelection(0)
+
+        binding.colorSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val color = when (position) {
+                    0 -> Color.BLACK
+                    1 -> Color.RED
+                    2 -> Color.BLUE
+                    3 -> Color.GREEN
+                    else -> Color.BLACK
+                }
+                selectedTextAnnotation?.let {
+                    adapter.getOverlayView(currentPageIndex)?.setTextColor(color)
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // Style Buttons
+        binding.btnBold.setOnClickListener {
+            isBoldActive = !isBoldActive
+            updateStyleButtons()
+            selectedTextAnnotation?.let {
+                adapter.getOverlayView(currentPageIndex)?.setTextBold(isBoldActive)
+            }
+        }
+
+        binding.btnItalic.setOnClickListener {
+            isItalicActive = !isItalicActive
+            updateStyleButtons()
+            selectedTextAnnotation?.let {
+                adapter.getOverlayView(currentPageIndex)?.setTextItalic(isItalicActive)
+            }
+        }
+    }
+
+    private fun updateStyleButtons() {
+        binding.btnBold.setBackgroundColor(if (isBoldActive) ContextCompat.getColor(this, R.color.primary) else Color.TRANSPARENT)
+        binding.btnItalic.setBackgroundColor(if (isItalicActive) ContextCompat.getColor(this, R.color.primary) else Color.TRANSPARENT)
+    }
+
+    private fun showTextOptions() {
+        binding.textOptionsPanel.visibility = View.VISIBLE
+    }
+
+    private fun hideTextOptions() {
+        binding.textOptionsPanel.visibility = View.GONE
     }
 
     private fun setMode(mode: PdfPageWithOverlayView.Mode) {
         currentMode = mode
         adapter.setModeForAllPages(mode)
+        updateTextOptionsVisibility()
+    }
+
+    private fun updateTextOptionsVisibility() {
+        if (currentMode == PdfPageWithOverlayView.Mode.TEXT) {
+            showTextOptions()
+        } else {
+            hideTextOptions()
+        }
     }
 
     private fun setupTextInputDialog() {
-        findViewById<Button>(R.id.btnCancelText).setOnClickListener {
-            textInputCard.visibility = View.GONE
+        binding.btnCancelText.setOnClickListener {
+            binding.textInputCard.visibility = View.GONE
         }
 
-        findViewById<Button>(R.id.btnConfirmText).setOnClickListener {
-            val text = textInputEditText.text.toString().trim()
+        binding.btnConfirmText.setOnClickListener {
+            val text = binding.textInputEditText.text.toString().trim()
             if (text.isNotEmpty()) {
-                // Add text to the current page at the touch position
                 adapter.addTextToPage(currentPageIndex, text, currentTouchX, currentTouchY)
-                Toast.makeText(this, "Text added to page ${currentPageIndex + 1}", Toast.LENGTH_SHORT).show()
+                binding.textInputCard.visibility = View.GONE
+                binding.textInputEditText.text.clear()
+                adapter.setModeForAllPages(PdfPageWithOverlayView.Mode.HAND)
+                updateToolSelection(binding.btnHand)
+            } else {
+                Toast.makeText(this, "Please enter some text", Toast.LENGTH_SHORT).show()
             }
-            textInputCard.visibility = View.GONE
-            textInputEditText.text.clear()
         }
     }
 
@@ -125,26 +316,25 @@ class EditPdfActivity : AppCompatActivity() {
         showTextInputDialog()
     }
 
-    private fun onTextAdded(pageIndex: Int, text: String, x: Float, y: Float) {
-        // Text was added to the overlay view
-        // You can save this information if needed
+    private fun onTextSelected(textAnnotation: PdfPageWithOverlayView.TextAnnotation?) {
+        selectedTextAnnotation = textAnnotation
+    }
+
+    private fun clearTextSelection() {
+        selectedTextAnnotation = null
+        adapter.getOverlayView(currentPageIndex)?.clearSelection()
     }
 
     private fun showTextInputDialog() {
-        textInputEditText.text.clear()
-        textInputCard.visibility = View.VISIBLE
-        textInputEditText.requestFocus()
-
-        // Show keyboard
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.showSoftInput(textInputEditText, 0)
+        binding.textInputEditText.text.clear()
+        binding.textInputCard.visibility = View.VISIBLE
+        binding.textInputEditText.requestFocus()
     }
 
     private fun loadPdfPages(uri: Uri) {
-        progressBar.visibility = ProgressBar.VISIBLE
+        binding.progressBar.visibility = View.VISIBLE
 
         try {
-            // Clear previous bitmaps
             pdfBitmaps.forEach { it.recycle() }
             pdfBitmaps.clear()
 
@@ -152,14 +342,9 @@ class EditPdfActivity : AppCompatActivity() {
             inputParcel?.let { pfd ->
                 val renderer = PdfRenderer(pfd)
 
-                // Render all pages to bitmaps
                 for (i in 0 until renderer.pageCount) {
                     val page = renderer.openPage(i)
-                    val bitmap = Bitmap.createBitmap(
-                        page.width,
-                        page.height,
-                        Bitmap.Config.ARGB_8888
-                    )
+                    val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     pdfBitmaps.add(bitmap)
                     page.close()
@@ -167,30 +352,30 @@ class EditPdfActivity : AppCompatActivity() {
                 renderer.close()
                 pfd.close()
 
-                // Setup RecyclerView with pages
                 adapter = PdfPageAdapter(
                     pdfBitmaps,
                     onAddTextRequest = { pageIndex, x, y -> onAddTextRequest(pageIndex, x, y) },
-                    onTextAdded = { pageIndex, text, x, y -> onTextAdded(pageIndex, text, x, y) }
+                    onTextAdded = { pageIndex, text, x, y -> },
+                    onTextSelected = { textAnnotation -> onTextSelected(textAnnotation) }
                 )
-                recyclerView.adapter = adapter
+                binding.pdfRecyclerView.adapter = adapter
 
-                pdfLoaded = true
                 Toast.makeText(this, "PDF loaded: ${pdfBitmaps.size} pages", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
             Toast.makeText(this, "Error loading PDF: ${e.message}", Toast.LENGTH_SHORT).show()
-            pdfLoaded = false
         } finally {
-            progressBar.visibility = ProgressBar.GONE
+            binding.progressBar.visibility = View.GONE
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clean up bitmaps to prevent memory leaks
-        pdfBitmaps.forEach { it.recycle() }
+        pdfBitmaps.forEach { if (!it.isRecycled) it.recycle() }
         pdfBitmaps.clear()
     }
 }
+
+// Extension functions
+fun Int.isBold(): Boolean = this and Typeface.BOLD != 0
+fun Int.isItalic(): Boolean = this and Typeface.ITALIC != 0
