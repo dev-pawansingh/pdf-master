@@ -7,7 +7,6 @@
     android:layout_height="match_parent"
     tools:context=".activities.EditPdfActivity">
 
-    <!-- Top Toolbar -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -16,17 +15,17 @@
         app:title="PDF Editor"
         app:navigationIcon="@drawable/ic_back" />
 
-    <!-- Editing Tools Strip -->
     <LinearLayout
         android:id="@+id/toolsStrip"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/toolbar"
         android:background="@color/surface_variant"
-        android:padding="8dp"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="6dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:weightSum="6">
+        android:weightSum="8">
 
         <ImageButton
             android:id="@+id/btnHand"
@@ -35,7 +34,7 @@
             android:layout_weight="1"
             android:src="@drawable/ic_hand"
             android:background="?attr/selectableItemBackgroundBorderless"
-            app:tint="@color/primary" />
+            app:tint="@color/primary"/>
 
         <ImageButton
             android:id="@+id/btnText"
@@ -74,475 +73,339 @@
             app:tint="@color/primary" />
 
         <ImageButton
+            android:id="@+id/btnUndo"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:src="@drawable/ic_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/primary"/>
+
+        <ImageButton
+            android:id="@+id/btnRedo"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:src="@drawable/ic_forward"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/primary"/>
+
+        <ImageButton
             android:id="@+id/btnSave"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
             android:src="@drawable/ic_save"
             android:background="?attr/selectableItemBackgroundBorderless"
-            app:tint="@color/primary" />
+            app:tint="@color/primary"/>
 
     </LinearLayout>
 
-    <!-- Text Options Panel -->
     <LinearLayout
-        android:id="@+id/textOptionsPanel"
+        android:id="@+id/toolsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/toolsStrip"
-        android:background="@color/surface"
-        android:padding="5dp"
-        android:visibility="gone"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
-        <!-- Font Family -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:id="@+id/textOptionsPanel"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Font"
-                android:textSize="12sp"
-                android:textColor="@color/primary" />
-
-            <Spinner
-                android:id="@+id/fontSpinner"
-                android:layout_width="120dp"
-                android:layout_height="32dp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <!-- Text Size -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Size"
-                android:textSize="12sp"
-                android:textColor="@color/primary"/>
-
-            <Spinner
-                android:id="@+id/textSizeSpinner"
-                android:layout_width="80dp"
-                android:layout_height="32dp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <!-- Color Picker -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Color"
-                android:textSize="12sp"
-                android:textColor="@color/primary" />
-
-            <Spinner
-                android:id="@+id/colorSpinner"
-                android:layout_width="100dp"
-                android:layout_height="32dp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <!-- Text Style -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Style"
-                android:textSize="12sp"
-                android:textColor="@color/primary" />
+            android:layout_below="@id/toolsStrip"
+            android:background="@color/surface"
+            android:padding="5dp"
+            android:visibility="gone"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_weight="1"
+                android:orientation="vertical"
                 android:gravity="center"
-                android:layout_marginTop="4dp">
+                android:layout_marginEnd="8dp">
 
-                <!-- Bold Toggle -->
                 <TextView
-                    android:id="@+id/btnBold"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:gravity="center"
-                    android:text="B"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:layout_marginEnd="4dp" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Font"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary" />
 
-                <!-- Italic Toggle -->
-                <TextView
-                    android:id="@+id/btnItalic"
-                    android:layout_width="32dp"
+                <Spinner
+                    android:id="@+id/fontSpinner"
+                    android:layout_width="120dp"
                     android:layout_height="32dp"
-                    android:gravity="center"
-                    android:text="I"
-                    android:textSize="14sp"
-                    android:textStyle="italic"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:layout_marginStart="4dp" />
-
+                    android:layout_marginTop="4dp"/>
             </LinearLayout>
-        </LinearLayout>
 
-    </LinearLayout>
-
-    <!-- Draw Options Panel -->
-    <LinearLayout
-        android:id="@+id/drawOptionsPanel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textOptionsPanel"
-        android:background="@color/surface"
-        android:padding="8dp"
-        android:visibility="gone"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <!-- Color Picker Circle -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp">
-
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Color"
-                android:textSize="12sp"
-                android:textColor="@color/primary"
-                android:layout_marginBottom="4dp" />
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginEnd="8dp">
 
-            <View
-                android:id="@+id/colorCircle"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:background="@drawable/color_circle_selector" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Size"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary"/>
+
+                <Spinner
+                    android:id="@+id/textSizeSpinner"
+                    android:layout_width="80dp"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Color"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary" />
+
+                <Spinner
+                    android:id="@+id/colorSpinner"
+                    android:layout_width="100dp"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Style"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:id="@+id/btnBold"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:text="B"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:layout_marginEnd="4dp" />
+
+                    <TextView
+                        android:id="@+id/btnItalic"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:text="I"
+                        android:textSize="14sp"
+                        android:textStyle="italic"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:layout_marginStart="4dp" />
+
+                </LinearLayout>
+            </LinearLayout>
+
         </LinearLayout>
 
-        <!-- Pen Size SeekBar -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:id="@+id/drawOptionsPanel"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
-            android:orientation="vertical"
+            android:layout_below="@id/toolsStrip"
+            android:background="@color/surface"
+            android:padding="8dp"
+            android:visibility="gone"
             android:gravity="center_vertical"
-            android:layout_marginEnd="16dp"
-            android:paddingHorizontal="8dp">
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Size"
-                android:textSize="12sp"
-                android:textColor="@color/primary"
-                android:layout_marginBottom="4dp" />
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginEnd="8dp">
 
-            <SeekBar
-                android:id="@+id/penSizeSeekBar"
-                android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Color"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary"
+                    android:layout_marginBottom="4dp" />
+
+                <View
+                    android:id="@+id/colorCircle"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:background="@drawable/color_circle_selector" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:max="20"
-                android:progress="5"
-                android:min="1" />
+                android:layout_weight="2"
+                android:orientation="vertical"
+                android:gravity="center_vertical"
+                android:layout_marginEnd="16dp"
+                android:paddingHorizontal="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Size"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary"
+                    android:layout_marginBottom="4dp" />
+
+                <SeekBar
+                    android:id="@+id/penSizeSeekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="20"
+                    android:progress="5"
+                    android:min="1" />
+            </LinearLayout>
+
         </LinearLayout>
 
-        <!-- Undo Button with Text -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:id="@+id/highlightOptionsPanel"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:id="@+id/undoLayout">
-
-            <TextView
-                android:id="@+id/btnUndo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Undo"
-                android:textSize="14sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:padding="8dp" />
-
-        </LinearLayout>
-
-        <!-- Redo Button with Text -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:id="@+id/redoLayout">
-
-            <TextView
-                android:id="@+id/btnRedo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Redo"
-                android:textSize="14sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:padding="8dp" />
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <!-- Highlight Options Panel -->
-    <LinearLayout
-        android:id="@+id/highlightOptionsPanel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/toolsStrip"
-        android:background="@color/surface"
-        android:padding="8dp"
-        android:visibility="gone"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <!-- Highlight Color Picker Circle -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Color"
-                android:textSize="12sp"
-                android:textColor="@color/primary"
-                android:layout_marginBottom="4dp" />
-
-            <View
-                android:id="@+id/highlightColorCircle"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:background="@drawable/color_circle_selector" />
-        </LinearLayout>
-
-        <!-- Highlight Size SeekBar -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="2"
-            android:orientation="vertical"
+            android:background="@color/surface"
+            android:padding="8dp"
+            android:visibility="gone"
             android:gravity="center_vertical"
-            android:layout_marginEnd="16dp"
-            android:paddingHorizontal="8dp">
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Size"
-                android:textSize="12sp"
-                android:textColor="@color/primary"
-                android:layout_marginBottom="4dp" />
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginEnd="8dp">
 
-            <SeekBar
-                android:id="@+id/highlightSizeSeekBar"
-                android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Color"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary"
+                    android:layout_marginBottom="4dp" />
+
+                <View
+                    android:id="@+id/highlightColorCircle"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:background="@drawable/color_circle_selector" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:max="30"
-                android:progress="15"
-                android:min="5" />
+                android:layout_weight="2"
+                android:orientation="vertical"
+                android:gravity="center_vertical"
+                android:layout_marginEnd="16dp"
+                android:paddingHorizontal="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Size"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary"
+                    android:layout_marginBottom="4dp" />
+
+                <SeekBar
+                    android:id="@+id/highlightSizeSeekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="30"
+                    android:progress="15"
+                    android:min="5" />
+            </LinearLayout>
+
         </LinearLayout>
 
-        <!-- Highlight Undo Button -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:id="@+id/eraserOptionsPanel"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:id="@+id/highlightUndoLayout">
-
-            <TextView
-                android:id="@+id/btnHighlightUndo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Undo"
-                android:textSize="14sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:padding="8dp" />
-        </LinearLayout>
-
-        <!-- Highlight Redo Button -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:id="@+id/highlightRedoLayout">
-
-            <TextView
-                android:id="@+id/btnHighlightRedo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Redo"
-                android:textSize="14sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:padding="8dp" />
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <!-- Eraser Options Panel -->
-    <LinearLayout
-        android:id="@+id/eraserOptionsPanel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/toolsStrip"
-        android:background="@color/surface"
-        android:padding="8dp"
-        android:visibility="gone"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <!-- Eraser Size SeekBar -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
+            android:background="@color/surface"
+            android:padding="8dp"
+            android:visibility="gone"
             android:gravity="center_vertical"
-            android:layout_marginEnd="16dp"
-            android:paddingHorizontal="8dp">
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Eraser Size"
-                android:textSize="12sp"
-                android:textColor="@color/primary"
-                android:layout_marginBottom="4dp" />
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_vertical"
+                android:layout_marginEnd="16dp"
+                android:paddingHorizontal="8dp">
 
-            <SeekBar
-                android:id="@+id/eraserSizeSeekBar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="40"
-                android:progress="20"
-                android:min="10" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Eraser Size"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary"
+                    android:layout_marginBottom="4dp" />
+
+                <SeekBar
+                    android:id="@+id/eraserSizeSeekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="30"
+                    android:min="20" />
+            </LinearLayout>
+
         </LinearLayout>
 
-        <!-- Eraser Undo Button -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginEnd="8dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:id="@+id/eraserUndoLayout">
-
-            <TextView
-                android:id="@+id/btnEraserUndo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Undo"
-                android:textSize="14sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:padding="8dp" />
-        </LinearLayout>
-
-        <!-- Eraser Redo Button -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:id="@+id/eraserRedoLayout">
-
-            <TextView
-                android:id="@+id/btnEraserRedo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Redo"
-                android:textSize="14sp"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:padding="8dp" />
-        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/black"/>
 
     </LinearLayout>
 
-    <!-- PDF Pages RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/pdfRecyclerView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/drawOptionsPanel"
-        android:background="@color/white" />
-
-    <!-- Text Input Dialog -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/textInputCard"
         android:layout_width="300dp"
@@ -596,6 +459,14 @@
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/pdfRecyclerView"
+        android:layout_width="match_parent"
+        tools:listitem="@layout/item_pdf_page"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/toolsContainer"
+        android:scrollbars="vertical"/>
 
     <ProgressBar
         android:id="@+id/progressBar"

@@ -1,40 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="12dp"
     android:layout_height="wrap_content">
 
     <TextView
         android:id="@+id/pageNumber"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="#CCFFFFFF"
+        android:background="#FFFFFF"
         android:padding="8dp"
         android:text="Page 1"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold" />
 
-    <FrameLayout
-        android:id="@+id/pageContainer"
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white">
+        app:cardElevation="6dp"
+        app:cardUseCompatPadding="true"
+        app:cardCornerRadius="6dp">
 
-        <ImageView
-            android:id="@+id/pdfPageImage"
+        <FrameLayout
+            android:id="@+id/pageContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitCenter" />
+            android:background="@android:color/white">
 
-        <com.pawansingh.pdfeditor.views.PdfPageWithOverlayView
-            android:id="@+id/overlayView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/transparent" />
+            <ImageView
+                android:id="@+id/pdfPageImage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:filterTouchesWhenObscured="false"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter" />
 
-    </FrameLayout>
+            <com.pawansingh.pdfeditor.views.PdfPageWithOverlayView
+                android:id="@+id/overlayView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent" />
+
+        </FrameLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 
 </LinearLayout>

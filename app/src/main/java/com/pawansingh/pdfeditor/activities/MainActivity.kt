@@ -17,20 +17,18 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
-    // Track which action was requested
     private var currentAction: PdfAction = PdfAction.VIEW
 
-    enum class PdfAction {
+    private enum class PdfAction {
         VIEW, EDIT
     }
 
-    // Single PDF picker for both actions
     private val pdfPickerLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
             when (currentAction) {
-                PdfAction.VIEW -> openPdfWithSystemViewer(it)
+                PdfAction.VIEW -> openPdf(it)
                 PdfAction.EDIT -> openPdfForEditing(it)
             }
         }
@@ -51,19 +49,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        // Open PDF Card - for viewing
         binding.openPdfCard.setOnClickListener {
             currentAction = PdfAction.VIEW
-            openPdfFilePicker()
+            pickPdf()
         }
 
-        // Edit PDF Card - for editing
         binding.editPdfCard.setOnClickListener {
             currentAction = PdfAction.EDIT
-            openPdfFilePicker() // Use the same picker
+            pickPdf()
         }
 
-        // Rest of your click listeners remain the same...
         binding.imageToPdfCard.setOnClickListener {
             startActivity(Intent(this, ImageToPdf::class.java))
         }
@@ -110,13 +105,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun openPdfFilePicker() {
+    private fun pickPdf() {
         pdfPickerLauncher.launch("application/pdf")
     }
 
-    private fun openPdfWithSystemViewer(uri: Uri) {
-        val intent = Intent(this, ViewPdfActivity::class.java)
-        intent.putExtra("pdfUri", uri)
+    private fun openPdf(uri: Uri) {
+        val intent = Intent(this, PdfXActivity::class.java).apply { putExtra("pdfUri", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
         startActivity(intent)
     }
 
@@ -126,7 +122,6 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    // Utility function to save PDF to app storage
     fun savePdfToAppStorage(pdfBytes: ByteArray, fileName: String): Uri {
         val file = File(filesDir, "pdfs/$fileName")
         file.parentFile?.mkdirs()

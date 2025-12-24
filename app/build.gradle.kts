@@ -17,6 +17,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -30,8 +36,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        }
     }
     buildFeatures {
         viewBinding = true
@@ -46,24 +54,14 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
 
-    // For editing, annotations, conversion
-    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
-
-    // For displaying PDF (built-in, no native .so files)
-//    implementation("androidx.pdf:pdf-renderer:1.0.1")
-
-//    implementation("androidx.pdf:pdf")
-    // implementation("com.github.barteksc:android-pdf-viewer:3.2.0-beta.1")
-
-    // Image Picker
     implementation("com.github.dhaval2404:imagepicker:2.1")
 
-//    implementation("com.github.chrisbanes:PhotoView:2.3.0")
-//    implementation("com.otaliastudios:zoomlayout:1.9.0")
-
-    // Lifecycle (for ViewModel)
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.9.4")
+
+    implementation("com.github.alamin5g:Alamin5G-PDF-Viewer:1.0.16")
+
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

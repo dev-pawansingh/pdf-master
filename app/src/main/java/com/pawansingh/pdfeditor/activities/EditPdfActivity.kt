@@ -2,32 +2,40 @@ package com.pawansingh.pdfeditor.activities
 
 import android.app.Dialog
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.PorterDuff
+import android.graphics.Matrix
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.pawansingh.pdfeditor.PdfAction
 import com.pawansingh.pdfeditor.R
 import com.pawansingh.pdfeditor.adapters.PdfPageAdapter
 import com.pawansingh.pdfeditor.databinding.ActivityEditPdfBinding
 import com.pawansingh.pdfeditor.views.PdfPageWithOverlayView
+import java.io.File
+import java.io.FileOutputStream
 
 class EditPdfActivity : AppCompatActivity() {
 
@@ -39,6 +47,9 @@ class EditPdfActivity : AppCompatActivity() {
     private var isBoldActive = false
     private var isItalicActive = false
 
+    private val globalUndoStack = mutableListOf<PdfAction>()
+    private val globalRedoStack = mutableListOf<PdfAction>()
+
     private var currentPenColor = Color.RED
     private var currentPenSize = 5f
 
@@ -47,10 +58,17 @@ class EditPdfActivity : AppCompatActivity() {
 
     private var currentEraserSize = 20f
 
-    // Add the missing variables
     private var currentPageIndex = 0
     private var currentTouchX = 0f
     private var currentTouchY = 0f
+
+    private var pendingFileName: String = "Edited_PDF"
+
+    private val createPdfLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+            if (uri != null) {
+                savePdfToUri(uri)
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,34 +94,21 @@ class EditPdfActivity : AppCompatActivity() {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////
-
     private fun setupEraserOptions() {
-        // Eraser Size SeekBar
-        binding.eraserSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        binding.eraserSizeSeekBar.setOnSeekBarChangeListener(object :
+            SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 currentEraserSize = progress.toFloat()
                 updateCurrentEraserSettings()
             }
+
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
-        // Eraser Undo/Redo
-        binding.eraserUndoLayout.setOnClickListener { undoLastEraser() }
-        binding.eraserRedoLayout.setOnClickListener { redoLastEraser() }
     }
 
     private fun updateCurrentEraserSettings() {
         adapter.setEraserSettings(currentEraserSize)
-    }
-
-    private fun undoLastEraser() {
-        adapter.undoEraser(currentPageIndex)
-    }
-
-    private fun redoLastEraser() {
-        adapter.redoEraser(currentPageIndex)
     }
 
     private fun showEraserOptions() {
@@ -116,11 +121,6 @@ class EditPdfActivity : AppCompatActivity() {
     private fun hideEraserOptions() {
         binding.eraserOptionsPanel.visibility = View.GONE
     }
-
-
-    ////////////////////////////////////////////////////////////////////////////////////
-
-    // Ye do functions ADD KARO
 
     private fun updateHighlightColorCircle() {
         val drawable = GradientDrawable().apply {
@@ -142,24 +142,20 @@ class EditPdfActivity : AppCompatActivity() {
     }
 
     private fun setupHighlightOptions() {
-        // Highlight Color Circle
         binding.highlightColorCircle.setOnClickListener {
             showHighlightColorPickerDialog()
         }
 
-        // Highlight Size SeekBar
-        binding.highlightSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        binding.highlightSizeSeekBar.setOnSeekBarChangeListener(object :
+            SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 currentHighlightSize = progress.toFloat()
                 updateCurrentHighlightSettings()
             }
+
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
-        // Highlight Undo/Redo
-        binding.highlightUndoLayout.setOnClickListener { undoLastHighlight() }
-        binding.highlightRedoLayout.setOnClickListener { redoLastHighlight() }
         updateHighlightColorCircle()
     }
 
@@ -178,7 +174,6 @@ class EditPdfActivity : AppCompatActivity() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Select Highlight Color")
 
-        // Main container with fixed width
         val mainContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
@@ -204,8 +199,6 @@ class EditPdfActivity : AppCompatActivity() {
 
             val colorView = View(this).apply {
                 layoutParams = LinearLayout.LayoutParams(36.dpToPx(), 36.dpToPx())
-
-                // ✅ PROGRAMMATICALLY DRAWABLE BANAO
                 val drawable = GradientDrawable()
                 drawable.shape = GradientDrawable.OVAL
                 drawable.setColor(colorValue)
@@ -252,24 +245,11 @@ class EditPdfActivity : AppCompatActivity() {
         adapter.setHighlightSettings(currentHighlightColor, currentHighlightSize)
     }
 
-    private fun undoLastHighlight() {
-        adapter.undoHighlight(currentPageIndex)
-    }
-
-    private fun redoLastHighlight() {
-        adapter.redoHighlight(currentPageIndex)
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////
-
     private fun setupDrawOptions() {
-        // YEH POORA FUNCTION ADD KARO
-        // Color Circle Click Listener
         binding.colorCircle.setOnClickListener {
             showColorPickerDialog()
         }
 
-        // Pen Size SeekBar
         binding.penSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 currentPenSize = progress.toFloat()
@@ -280,19 +260,8 @@ class EditPdfActivity : AppCompatActivity() {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
-        // Undo Button with Text
-        binding.undoLayout.setOnClickListener {
-            undoLastDrawing()
-        }
-
-        // Redo Button with Text
-        binding.redoLayout.setOnClickListener {
-            redoLastDrawing()
-        }
     }
 
-    // YEH SAB FUNCTIONS ADD KARO
     private fun showColorPickerDialog() {
         val colors = listOf(
             Pair("Black", Color.BLACK),
@@ -308,7 +277,6 @@ class EditPdfActivity : AppCompatActivity() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Select Pen Color")
 
-        // Main container with fixed width
         val mainContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
@@ -319,7 +287,6 @@ class EditPdfActivity : AppCompatActivity() {
             rowCount = 2
         }
 
-        // ✅ VARIABLE BANAO DIALOG KE LIYE
         var colorDialog: Dialog? = null
 
         for ((colorName, colorValue) in colors) {
@@ -327,20 +294,24 @@ class EditPdfActivity : AppCompatActivity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER
                 layoutParams = GridLayout.LayoutParams().apply {
-                    width = 70.dpToPx()  // ✅ WIDTH THODI KAM KARO
+                    width = 70.dpToPx()
                     height = GridLayout.LayoutParams.WRAP_CONTENT
-                    setMargins(2.dpToPx(), 2.dpToPx(), 2.dpToPx(), 2.dpToPx()) // ✅ MARGIN BAHUT KAM KARO
+                    setMargins(
+                        2.dpToPx(),
+                        2.dpToPx(),
+                        2.dpToPx(),
+                        2.dpToPx()
+                    ) // ✅ MARGIN BAHUT KAM KARO
                 }
             }
 
             val colorView = View(this).apply {
                 layoutParams = LinearLayout.LayoutParams(36.dpToPx(), 36.dpToPx())
 
-                // ✅ PROGRAMMATICALLY DRAWABLE BANAO
                 val drawable = GradientDrawable()
                 drawable.shape = GradientDrawable.OVAL
-                drawable.setColor(colorValue) // ✅ ACTUAL COLOR SET KARO
-                drawable.setStroke(3.dpToPx(), Color.DKGRAY) // ✅ BORDER ADD KARO
+                drawable.setColor(colorValue)
+                drawable.setStroke(3.dpToPx(), Color.DKGRAY)
 
                 background = drawable
 
@@ -361,7 +332,7 @@ class EditPdfActivity : AppCompatActivity() {
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    topMargin = 2.dpToPx() // ✅ MARGIN KAM KARO
+                    topMargin = 2.dpToPx()
                 }
             }
 
@@ -374,10 +345,12 @@ class EditPdfActivity : AppCompatActivity() {
         builder.setView(mainContainer)
         builder.setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
 
-        colorDialog = builder.create() // ✅ DIALOG KO VARIABLE MEIN STORE KARO
+        colorDialog = builder.create()
 
-        // Dialog ki width set karo (thodi kam karo)
-        colorDialog.window?.setLayout(280.dpToPx(), ViewGroup.LayoutParams.WRAP_CONTENT) // ✅ 320 se 280 KARO
+        colorDialog.window?.setLayout(
+            280.dpToPx(),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ) // ✅ 320 se 280 KARO
 
         colorDialog.show()
     }
@@ -395,15 +368,6 @@ class EditPdfActivity : AppCompatActivity() {
         adapter.setPenSettings(currentPenColor, currentPenSize)
     }
 
-    private fun undoLastDrawing() {
-        adapter.undoDrawing(currentPageIndex)
-    }
-
-    private fun redoLastDrawing() {
-        adapter.redoDrawing(currentPageIndex)
-    }
-
-    // Extension function
     private fun Int.dpToPx(): Int {
         return (this * resources.displayMetrics.density).toInt()
     }
@@ -415,8 +379,6 @@ class EditPdfActivity : AppCompatActivity() {
     private fun hideDrawOptions() {
         binding.drawOptionsPanel.visibility = View.GONE
     }
-
-///////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun initializeViews() {
         binding.pdfRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -450,6 +412,7 @@ class EditPdfActivity : AppCompatActivity() {
         updateToolSelection(binding.btnHand)
 
         binding.btnHand.setOnClickListener {
+            it.pressAnim()
             setMode(PdfPageWithOverlayView.Mode.HAND)
             updateToolSelection(binding.btnHand)
             hideTextOptions()
@@ -459,6 +422,7 @@ class EditPdfActivity : AppCompatActivity() {
         }
 
         binding.btnText.setOnClickListener {
+            it.pressAnim()
             setMode(PdfPageWithOverlayView.Mode.TEXT)
             updateToolSelection(binding.btnText)
             showTextOptions()
@@ -467,6 +431,7 @@ class EditPdfActivity : AppCompatActivity() {
         }
 
         binding.btnDraw.setOnClickListener {
+            it.pressAnim()
             setMode(PdfPageWithOverlayView.Mode.DRAW)
             updateToolSelection(binding.btnDraw)
             showDrawOptions()
@@ -476,6 +441,7 @@ class EditPdfActivity : AppCompatActivity() {
         }
 
         binding.btnHighlight.setOnClickListener {
+            it.pressAnim()
             setMode(PdfPageWithOverlayView.Mode.HIGHLIGHT)
             updateToolSelection(binding.btnHighlight)
             hideTextOptions()
@@ -485,6 +451,7 @@ class EditPdfActivity : AppCompatActivity() {
         }
 
         binding.btnEraser.setOnClickListener {
+            it.pressAnim()
             setMode(PdfPageWithOverlayView.Mode.ERASER)
             updateToolSelection(binding.btnEraser)
             hideTextOptions()
@@ -494,8 +461,35 @@ class EditPdfActivity : AppCompatActivity() {
             clearTextSelection()
         }
 
+        binding.btnUndo.setOnClickListener {
+            it.pressAnim()
+            if (globalUndoStack.isEmpty()) return@setOnClickListener
+            val action = globalUndoStack.removeAt(globalUndoStack.size - 1)
+            globalRedoStack.add(action)
+            when (action) {
+                is PdfAction.Draw -> adapter.undoDrawing(action.page)
+                is PdfAction.Highlight -> adapter.undoHighlight(action.page)
+                is PdfAction.Erase -> adapter.undoEraser(action.page)
+                is PdfAction.Text -> { }
+            }
+        }
+
+        binding.btnRedo.setOnClickListener {
+            it.pressAnim()
+            if (globalRedoStack.isEmpty()) return@setOnClickListener
+            val action = globalRedoStack.removeAt(globalRedoStack.size - 1)
+            globalUndoStack.add(action)
+            when (action) {
+                is PdfAction.Draw -> adapter.redoDrawing(action.page)
+                is PdfAction.Highlight -> adapter.redoHighlight(action.page)
+                is PdfAction.Erase -> adapter.redoEraser(action.page)
+                is PdfAction.Text -> { }
+            }
+        }
+
         binding.btnSave.setOnClickListener {
-            Toast.makeText(this, "Save functionality coming soon", Toast.LENGTH_SHORT).show()
+            it.pressAnim()
+            showSaveDialog()
         }
     }
 
@@ -517,22 +511,27 @@ class EditPdfActivity : AppCompatActivity() {
     }
 
     private fun setupTextOptions() {
-        // Font Spinner with default value display
         val fonts = arrayOf("Default", "Serif", "Sans Serif", "Monospace")
-        val fontAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, fonts) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = super.getView(position, convertView, parent)
-                val textView = view.findViewById<TextView>(android.R.id.text1)
-                textView.text = "Font: ${fonts[position]}"
-                return view
+        val fontAdapter =
+            object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, fonts) {
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getView(position, convertView, parent)
+                    val textView = view.findViewById<TextView>(android.R.id.text1)
+                    textView.text = "Font: ${fonts[position]}"
+                    return view
+                }
             }
-        }
         fontAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.fontSpinner.adapter = fontAdapter
         binding.fontSpinner.setSelection(0)
 
         binding.fontSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
                 val fontFamily = when (position) {
                     1 -> Typeface.SERIF
                     2 -> Typeface.SANS_SERIF
@@ -543,68 +542,84 @@ class EditPdfActivity : AppCompatActivity() {
                     adapter.getOverlayView(currentPageIndex)?.setFontFamily(fontFamily)
                 }
             }
+
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-
-        // Text Size Spinner with default value display
         val textSizes = arrayOf("12", "14", "16", "18", "20", "24", "28", "32", "36", "40")
-        val sizeAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, textSizes) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = super.getView(position, convertView, parent)
-                val textView = view.findViewById<TextView>(android.R.id.text1)
-                textView.text = "Size: ${textSizes[position]}"
-                return view
+        val sizeAdapter =
+            object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, textSizes) {
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getView(position, convertView, parent)
+                    val textView = view.findViewById<TextView>(android.R.id.text1)
+                    textView.text = "Size: ${textSizes[position]}"
+                    return view
+                }
             }
-        }
         sizeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.textSizeSpinner.adapter = sizeAdapter
         binding.textSizeSpinner.setSelection(4) // Default to 20
 
-        binding.textSizeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val size = textSizes[position].toFloat()
-                selectedTextAnnotation?.let {
-                    adapter.getOverlayView(currentPageIndex)?.setTextSize(size)
+        binding.textSizeSpinner.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    val size = textSizes[position].toFloat()
+                    selectedTextAnnotation?.let {
+                        adapter.getOverlayView(currentPageIndex)?.setTextSize(size)
+                    }
                 }
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
 
-        // Color Spinner with default value display
+                override fun onNothingSelected(parent: AdapterView<*>?) {}
+            }
+
         val colors = arrayOf("Black", "Red", "Blue", "Green")
-        val colorAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, colors) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = super.getView(position, convertView, parent)
-                val textView = view.findViewById<TextView>(android.R.id.text1)
-                textView.text = "Color: ${colors[position]}"
-                textView.setTextColor(getColorForPosition(position))
-                return view
-            }
+        val colorAdapter =
+            object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, colors) {
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getView(position, convertView, parent)
+                    val textView = view.findViewById<TextView>(android.R.id.text1)
+                    textView.text = "Color: ${colors[position]}"
+                    textView.setTextColor(getColorForPosition(position))
+                    return view
+                }
 
-            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = super.getDropDownView(position, convertView, parent)
-                val textView = view.findViewById<TextView>(android.R.id.text1)
-                textView.text = colors[position]
-                textView.setTextColor(getColorForPosition(position))
-                return view
-            }
+                override fun getDropDownView(
+                    position: Int,
+                    convertView: View?,
+                    parent: ViewGroup
+                ): View {
+                    val view = super.getDropDownView(position, convertView, parent)
+                    val textView = view.findViewById<TextView>(android.R.id.text1)
+                    textView.text = colors[position]
+                    textView.setTextColor(getColorForPosition(position))
+                    return view
+                }
 
-            private fun getColorForPosition(position: Int): Int {
-                return when (position) {
-                    0 -> Color.BLACK
-                    1 -> Color.RED
-                    2 -> Color.BLUE
-                    3 -> Color.GREEN
-                    else -> Color.BLACK
+                private fun getColorForPosition(position: Int): Int {
+                    return when (position) {
+                        0 -> Color.BLACK
+                        1 -> Color.RED
+                        2 -> Color.BLUE
+                        3 -> Color.GREEN
+                        else -> Color.BLACK
+                    }
                 }
             }
-        }
         colorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.colorSpinner.adapter = colorAdapter
         binding.colorSpinner.setSelection(0)
 
         binding.colorSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
                 val color = when (position) {
                     0 -> Color.BLACK
                     1 -> Color.RED
@@ -616,10 +631,10 @@ class EditPdfActivity : AppCompatActivity() {
                     adapter.getOverlayView(currentPageIndex)?.setTextColor(color)
                 }
             }
+
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // Style Buttons
         binding.btnBold.setOnClickListener {
             isBoldActive = !isBoldActive
             updateStyleButtons()
@@ -638,8 +653,18 @@ class EditPdfActivity : AppCompatActivity() {
     }
 
     private fun updateStyleButtons() {
-        binding.btnBold.setBackgroundColor(if (isBoldActive) ContextCompat.getColor(this, R.color.primary) else Color.TRANSPARENT)
-        binding.btnItalic.setBackgroundColor(if (isItalicActive) ContextCompat.getColor(this, R.color.primary) else Color.TRANSPARENT)
+        binding.btnBold.setBackgroundColor(
+            if (isBoldActive) ContextCompat.getColor(
+                this,
+                R.color.primary
+            ) else Color.TRANSPARENT
+        )
+        binding.btnItalic.setBackgroundColor(
+            if (isItalicActive) ContextCompat.getColor(
+                this,
+                R.color.primary
+            ) else Color.TRANSPARENT
+        )
     }
 
     private fun showTextOptions() {
@@ -663,45 +688,34 @@ class EditPdfActivity : AppCompatActivity() {
                 hideDrawOptions()
                 hideHighlightOptions()
                 hideEraserOptions()
-                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
-                    addRule(RelativeLayout.BELOW, R.id.textOptionsPanel)
-                }
             }
+
             PdfPageWithOverlayView.Mode.DRAW -> {
                 showDrawOptions()
                 hideTextOptions()
                 hideHighlightOptions()
                 hideEraserOptions()
-                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
-                    addRule(RelativeLayout.BELOW, R.id.drawOptionsPanel)
-                }
             }
+
             PdfPageWithOverlayView.Mode.HIGHLIGHT -> {
                 showHighlightOptions()
                 hideTextOptions()
                 hideDrawOptions()
                 hideEraserOptions()
-                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
-                    addRule(RelativeLayout.BELOW, R.id.highlightOptionsPanel)
-                }
             }
-            PdfPageWithOverlayView.Mode.ERASER -> { // ✅ YEH NAYA CASE ADD KARO
+
+            PdfPageWithOverlayView.Mode.ERASER -> {
                 showEraserOptions()
                 hideTextOptions()
                 hideDrawOptions()
                 hideHighlightOptions()
-                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
-                    addRule(RelativeLayout.BELOW, R.id.eraserOptionsPanel)
-                }
             }
+
             else -> {
                 hideTextOptions()
                 hideDrawOptions()
                 hideHighlightOptions()
                 hideEraserOptions()
-                binding.pdfRecyclerView.layoutParams = (binding.pdfRecyclerView.layoutParams as RelativeLayout.LayoutParams).apply {
-                    addRule(RelativeLayout.BELOW, R.id.toolsStrip)
-                }
             }
         }
         binding.pdfRecyclerView.requestLayout()
@@ -761,8 +775,14 @@ class EditPdfActivity : AppCompatActivity() {
 
                 for (i in 0 until renderer.pageCount) {
                     val page = renderer.openPage(i)
-                    val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    val displayMetrics = resources.displayMetrics
+                    val screenWidth = displayMetrics.widthPixels
+                    val scale = screenWidth.toFloat() / page.width.toFloat()
+                    val bitmap = Bitmap.createBitmap((page.width * scale).toInt(), (page.height * scale).toInt(), Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(bitmap)
+                    canvas.drawColor(Color.WHITE)
+                    val matrix = Matrix().apply { setScale(scale, scale) }
+                    page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     pdfBitmaps.add(bitmap)
                     page.close()
                 }
@@ -775,15 +795,25 @@ class EditPdfActivity : AppCompatActivity() {
                     onTextAdded = { pageIndex, text, x, y -> },
                     onTextSelected = { textAnnotation -> onTextSelected(textAnnotation) }
                 )
-                binding.pdfRecyclerView.adapter = adapter
+                adapter.onDrawFinished = { page ->
+                    pushGlobalAction(PdfAction.Draw(page))
+                }
 
-                //////
+                adapter.onHighlightFinished = { page ->
+                    pushGlobalAction(PdfAction.Highlight(page))
+                }
+
+                adapter.onEraserFinished = { page ->
+                    pushGlobalAction(PdfAction.Erase(page))
+                }
+
+                binding.pdfRecyclerView.adapter = adapter
                 updateCurrentPenSettings()
                 updateCurrentHighlightSettings()
                 updateCurrentEraserSettings()
-                //////
 
-                Toast.makeText(this, "PDF loaded: ${pdfBitmaps.size} pages", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "PDF loaded: ${pdfBitmaps.size} pages", Toast.LENGTH_SHORT)
+                    .show()
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Error loading PDF: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -792,13 +822,76 @@ class EditPdfActivity : AppCompatActivity() {
         }
     }
 
+    private fun pushGlobalAction(action: PdfAction) {
+        globalUndoStack.add(action)
+        globalRedoStack.clear()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         pdfBitmaps.forEach { if (!it.isRecycled) it.recycle() }
         pdfBitmaps.clear()
     }
-}
 
-// Extension functions
-fun Int.isBold(): Boolean = this and Typeface.BOLD != 0
-fun Int.isItalic(): Boolean = this and Typeface.ITALIC != 0
+    private fun showSaveDialog() {
+        val editText = EditText(this).apply {
+            hint = "File name"
+            setText("Edited_PDF")
+            setPadding(32, 24, 32, 24)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Save PDF")
+            .setMessage("Enter file name")
+            .setView(editText)
+            .setPositiveButton("Save") { _, _ ->
+                pendingFileName = editText.text.toString()
+                    .ifBlank { "Edited_PDF" }
+
+                createPdfLauncher.launch("$pendingFileName.pdf")
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun savePdfToUri(uri: Uri) {
+        val pdfDocument = PdfDocument()
+
+        try {
+            pdfBitmaps.forEachIndexed { index, originalBitmap ->
+                val overlay = adapter.getOverlayView(index)
+                val finalBitmap =
+                    overlay?.exportOverlayBitmap(originalBitmap) ?: originalBitmap
+
+                val pageInfo = PdfDocument.PageInfo.Builder(
+                    finalBitmap.width,
+                    finalBitmap.height,
+                    index + 1
+                ).create()
+
+                val page = pdfDocument.startPage(pageInfo)
+                page.canvas.drawBitmap(finalBitmap, 0f, 0f, null)
+                pdfDocument.finishPage(page)
+            }
+
+            contentResolver.openOutputStream(uri)?.use { output ->
+                pdfDocument.writeTo(output)
+            }
+
+            Toast.makeText(this, "PDF saved successfully", Toast.LENGTH_LONG).show()
+
+        } catch (e: Exception) {
+            Toast.makeText(this, "Save failed: ${e.message}", Toast.LENGTH_LONG).show()
+        } finally {
+            pdfDocument.close()
+        }
+    }
+
+    private fun View.pressAnim() {
+        animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
+            .withEndAction {
+                animate().scaleX(1f).scaleY(1f).setDuration(80).start()
+            }.start()
+    }
+
+}

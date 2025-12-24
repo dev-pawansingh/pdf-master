@@ -3,4 +3,6 @@
     <string name="font_prompt">Select Font</string>
     <string name="size_prompt">Select Size</string>
     <string name="color_prompt">Select Color</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

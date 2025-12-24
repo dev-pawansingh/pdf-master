@@ -18,11 +18,16 @@ class PdfPageAdapter(
     private val overlayViews = mutableMapOf<Int, PdfPageWithOverlayView>()
     private var currentMode = PdfPageWithOverlayView.Mode.HAND
 
-    inner class PdfPageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class PdfPageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val pageImage: android.widget.ImageView = itemView.findViewById(R.id.pdfPageImage)
         val pageNumber: android.widget.TextView = itemView.findViewById(R.id.pageNumber)
         val overlayView: PdfPageWithOverlayView = itemView.findViewById(R.id.overlayView)
     }
+
+    var onDrawFinished: ((Int) -> Unit)? = null
+    var onHighlightFinished: ((Int) -> Unit)? = null
+    var onEraserFinished: ((Int) -> Unit)? = null
+    var onTextAddedFinished: ((Int) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PdfPageViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_pdf_page, parent, false)
@@ -34,6 +39,7 @@ class PdfPageAdapter(
 
         val bitmap = pages[position]
         holder.pageImage.setImageBitmap(bitmap)
+        holder.pageImage.filterTouchesWhenObscured = false
         holder.pageNumber.text = "Page ${position + 1}"
 
         overlayViews[position] = holder.overlayView
@@ -50,6 +56,18 @@ class PdfPageAdapter(
         holder.overlayView.onTouchHandled = { isHandled ->
             holder.itemView.parent?.requestDisallowInterceptTouchEvent(isHandled)
         }
+        holder.overlayView.onDrawFinished = {
+            onDrawFinished?.invoke(position)
+        }
+
+        holder.overlayView.onHighlightFinished = {
+            onHighlightFinished?.invoke(position)
+        }
+
+        holder.overlayView.onEraserFinished = {
+            onEraserFinished?.invoke(position)
+        }
+
     }
 
     override fun getItemCount(): Int = pages.size
@@ -67,10 +85,22 @@ class PdfPageAdapter(
     fun getOverlayView(pageIndex: Int): PdfPageWithOverlayView? {
         return overlayViews[pageIndex]
     }
-    // PdfPageAdapter.kt mein ye functions ADD KARO
+
     fun setPenSettings(color: Int, size: Float) {
         overlayViews.values.forEach { overlayView ->
             overlayView.setPenSettings(color, size)
+        }
+    }
+
+    fun setHighlightSettings(color: Int, size: Float) {
+        overlayViews.values.forEach { overlayView ->
+            overlayView.setHighlightSettings(color, size)
+        }
+    }
+
+    fun setEraserSettings(size: Float) {
+        overlayViews.values.forEach { overlayView ->
+            overlayView.setEraserSettings(size)
         }
     }
 
@@ -82,28 +112,12 @@ class PdfPageAdapter(
         overlayViews[pageIndex]?.redo()
     }
 
-    // PdfPageAdapter.kt mein ye methods ADD KARO
-
-    // Highlight settings
-    fun setHighlightSettings(color: Int, size: Float) {
-        overlayViews.values.forEach { overlayView ->
-            overlayView.setHighlightSettings(color, size)
-        }
-    }
-
     fun undoHighlight(pageIndex: Int) {
         overlayViews[pageIndex]?.undoHighlight()
     }
 
     fun redoHighlight(pageIndex: Int) {
         overlayViews[pageIndex]?.redoHighlight()
-    }
-
-    // Eraser settings
-    fun setEraserSettings(size: Float) {
-        overlayViews.values.forEach { overlayView ->
-            overlayView.setEraserSettings(size)
-        }
     }
 
     fun undoEraser(pageIndex: Int) {
