@@ -12,7 +12,8 @@ class PdfPageAdapter(
     private val pages: List<Bitmap>,
     private val onAddTextRequest: (Int, Float, Float) -> Unit,
     private val onTextAdded: (Int, String, Float, Float) -> Unit,
-    private val onTextSelected: (PdfPageWithOverlayView.TextAnnotation?) -> Unit
+    private val onTextSelected: (PdfPageWithOverlayView.TextAnnotation?) -> Unit,
+    private val onTextSizeChanged: ((Int, Float) -> Unit)? = null
 ) : RecyclerView.Adapter<PdfPageAdapter.PdfPageViewHolder>() {
 
     private val overlayViews = mutableMapOf<Int, PdfPageWithOverlayView>()
@@ -68,6 +69,9 @@ class PdfPageAdapter(
             onEraserFinished?.invoke(position)
         }
 
+        holder.overlayView.onTextSizeChanged = { newSize ->
+            onTextSizeChanged?.invoke(position, newSize)
+        }
     }
 
     override fun getItemCount(): Int = pages.size

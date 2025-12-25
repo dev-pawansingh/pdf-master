@@ -178,11 +178,11 @@
                     android:textSize="12sp"
                     android:textColor="@color/primary" />
 
-                <Spinner
-                    android:id="@+id/colorSpinner"
-                    android:layout_width="100dp"
-                    android:layout_height="32dp"
-                    android:layout_marginTop="4dp"/>
+                <View
+                    android:id="@+id/textColorCircle"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:background="@drawable/color_circle_selector" />
             </LinearLayout>
 
             <LinearLayout

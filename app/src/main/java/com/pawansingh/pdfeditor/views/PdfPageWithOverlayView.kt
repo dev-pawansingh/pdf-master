@@ -33,14 +33,12 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
     private var startX = 0f
     private var startY = 0f
 
-    // Text styling
     private var currentTextColor = Color.BLACK
     private var currentTextSize = 20f
     private var isBold = false
     private var isItalic = false
     private var currentFontFamily = Typeface.DEFAULT
 
-    // Selection
     private val selectionPaint = Paint().apply {
         color = Color.BLUE
         style = Paint.Style.STROKE
@@ -50,33 +48,27 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
 
     private var isResizingText = false
 
-    // Callbacks
     var onAddTextRequest: ((x: Float, y: Float) -> Unit)? = null
     var onTextSelected: ((TextAnnotation?) -> Unit)? = null
     var onTouchHandled: ((Boolean) -> Unit)? = null
 
-    // Highlight ke liye variables
     private var currentHighlightColor = Color.YELLOW
     private var currentHighlightSize = 15f
     private val highlightPaths = mutableListOf<DrawingPath>()
     private var currentHighlightPath = Path()
     private var currentHighlightPaint = Paint()
 
-    // Highlight history
     private val highlightHistory = mutableListOf<List<DrawingPath>>()
     private val highlightRedoHistory = mutableListOf<List<DrawingPath>>()
 
-    // Eraser ke liye variables
     private var currentEraserSize = 20f
     private val eraserPaths = mutableListOf<DrawingPath>()
     private var currentEraserPath = Path()
     private var currentEraserPaint = Paint()
 
-    // Eraser history
     private val eraserHistory = mutableListOf<List<DrawingPath>>()
     private val eraserRedoHistory = mutableListOf<List<DrawingPath>>()
 
-    // Eraser preview (translucent circle)
     private var eraserPreviewX = -1f
     private var eraserPreviewY = -1f
     private var showEraserPreview = false
@@ -84,6 +76,8 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
     var onDrawFinished: (() -> Unit)? = null
     var onHighlightFinished: (() -> Unit)? = null
     var onEraserFinished: (() -> Unit)? = null
+
+    var onTextSizeChanged: ((Float) -> Unit)? = null
 
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
@@ -113,22 +107,28 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
     }
 
     private fun setupHighlightPaint() {
-        currentHighlightPaint = Paint().apply {
+        currentHighlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.YELLOW and 0x80FFFFFF.toInt() // Semi-transparent yellow
             style = Paint.Style.STROKE
-            strokeWidth = 15f
+            strokeWidth = 16f
             isAntiAlias = true
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
-            alpha = 80
+            alpha = 128
+            xfermode = null
         }
     }
 
     fun setHighlightSettings(color: Int, size: Float) {
         currentHighlightColor = color and 0x80FFFFFF.toInt() // Semi-transparent
         currentHighlightSize = size
-        currentHighlightPaint.color = currentHighlightColor
-        currentHighlightPaint.strokeWidth = currentHighlightSize
+        currentHighlightPaint.apply {
+            this.color = currentHighlightColor
+            this.strokeWidth = currentHighlightSize
+            this.style = Paint.Style.STROKE
+            this.alpha = 128
+            this.xfermode = null
+        }
     }
 
     private fun setupPaint() {
@@ -159,7 +159,7 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
             }
 
             Mode.HIGHLIGHT -> { // ✅ HIGHLIGHT MODE ADD KARO
-                currentHighlightPaint.style = Paint.Style.FILL_AND_STROKE
+                currentHighlightPaint.style = Paint.Style.STROKE
                 currentHighlightPaint.color = currentHighlightColor
                 currentHighlightPaint.strokeWidth = currentHighlightSize
                 currentHighlightPaint.alpha = 128 // Semi-transparent
@@ -203,7 +203,7 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
         updateSelectedTextStyle()
     }
 
-    fun setFontFamily(fontFamily: Typeface) {
+    fun setFontFamily(fontFamily: Typeface?) {
         currentFontFamily = fontFamily
         updateSelectedTextStyle()
     }
@@ -316,12 +316,10 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
         val textWidth = textAnn.paint.measureText(textAnn.text)
         val metrics = textAnn.paint.fontMetrics
 
-        // Draw delete button (red circle with X) at top-right corner
         val deleteButtonX = textAnn.x + textWidth + 25f
         val deleteButtonY = textAnn.y + metrics.top - 20f
         val buttonRadius = 25f
 
-        // Draw red circle
         val deleteButtonPaint = Paint().apply {
             color = Color.RED
             style = Paint.Style.FILL
@@ -363,21 +361,6 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
             typeface = Typeface.DEFAULT_BOLD
         }
         canvas.drawText("±", resizeButtonX, resizeButtonY + 6f, buttonTextPaint)
-    }
-
-    private fun handleUITouch(x: Float, y: Float): Boolean {
-        selectedTextAnnotation?.let { textAnn ->
-            if (isPointOnDeleteButton(x, y, textAnn)) {
-                deleteSelectedText()
-                return true
-            }
-
-            if (isPointOnResizeButton(x, y, textAnn)) {
-                isResizingText = true
-                return true
-            }
-        }
-        return false
     }
 
     private fun isPointOnDeleteButton(x: Float, y: Float, textAnn: TextAnnotation): Boolean {
@@ -719,6 +702,7 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
             invalidate()
         }
     }
+
     fun redo() {
         if (redoHistory.isNotEmpty()) {
             drawingHistory.add(ArrayList(paths))
@@ -747,6 +731,5 @@ class PdfPageWithOverlayView @JvmOverloads constructor(
         draw(canvas)
         return result
     }
-
 
 }
